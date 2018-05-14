@@ -23,10 +23,10 @@ public class Anexo implements Serializable {
     private int id; 
     @Lob()
     @Basic(fetch = FetchType.EAGER)
-    @JsonIgnore
+    //@JsonIgnore
     private byte[] documentoAnexo;
     
-    @JsonIgnore
+    //@JsonIgnore
     private String tipoAnexo;
     
     private String nomeAnexo;

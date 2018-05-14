@@ -23,4 +23,6 @@ public interface TopicoDAO extends PagingAndSortingRepository<Topico, Integer>{
     @Query( "SELECT topico FROM  Grupo grupo JOIN grupo.topicos topico WHERE grupo.id = :idgrupo ORDER BY topico.nome")  // Spring Query EM ORDEM ALFABETICA  
     public Page<Topico> findTopico(@Param("idgrupo")int id,  Pageable pageable);
     
+    Topico findById(int id);
+    
 }

@@ -6,6 +6,7 @@
 package br.edu.ifrs.restinga.saveif.controller;
 
 import br.edu.ifrs.restinga.saveif.aut.UsuarioAut;
+import br.edu.ifrs.restinga.saveif.dao.AnexoDAO;
 import br.edu.ifrs.restinga.saveif.dao.GrupoDAO;
 import br.edu.ifrs.restinga.saveif.dao.PostDAO;
 import br.edu.ifrs.restinga.saveif.dao.TopicoDAO;
@@ -44,6 +45,9 @@ public class Posts {
     
     @Autowired
     GrupoDAO grupoDAO;
+    
+    @Autowired
+    AnexoDAO anexoDAO;
 
     @RequestMapping(path = "/grupos/{id}/geral", method = RequestMethod.GET)
     public Iterable<Post> listarGeral(@RequestParam(required = false, defaultValue = "0") int pagina, @PathVariable int id) {
@@ -68,9 +72,9 @@ public class Posts {
         return postDAO.findAll(pageRequest);
     }
     
-    @RequestMapping(path="/posts/{idGrupo}", method = RequestMethod.POST)
+    @RequestMapping(path="/grupos/{idGrupo}/topicos/{idTopico}/posts", method = RequestMethod.POST)
     @ResponseStatus(HttpStatus.CREATED)
-    public Post inserir(@RequestBody Post post, @AuthenticationPrincipal UsuarioAut usuarioAut, @PathVariable int idGrupo)
+    public Post inserir(@RequestBody Post post, @AuthenticationPrincipal UsuarioAut usuarioAut, @PathVariable int idGrupo, @PathVariable int idTopico) throws IOException
     {
         post.setId(0);
         post.setAutorPost(usuarioAut.getUsuario());
@@ -79,17 +83,25 @@ public class Posts {
         
         Grupo grupoAtual = grupoDAO.findById(idGrupo);
         
+        Topico topicoAtual = topicoDAO.findById(idTopico);
+        
         List<Topico> topicos = new ArrayList<>();
         topicos = grupoAtual.getTopicos();
         
         List<Post> posts = new ArrayList<>();
-        posts = topicos.get(0).getPosts();
+        posts = topicoAtual.getPosts();
         
-        posts.add (post);
+        posts.add (postSalvo);
         
-        topicos.get(0).setPosts(posts);
+        topicoAtual.setPosts(posts);
         
-        grupoAtual.setTopicos (topicos);
+        for (int i=0; i<=topicos.size(); i++){
+            if(topicos.get(i).getId()==topicoAtual.getId()){
+                topicos.set(i, topicoAtual);
+                i=topicos.size();
+            }
+        }
+        grupoAtual.setTopicos(topicos);
         
         topicoDAO.save(topicos.get(0));
         grupoDAO.save(grupoAtual);
@@ -97,24 +109,24 @@ public class Posts {
         return postSalvo;
     }
     
-    @RequestMapping(path = "/posts/{id}/arquivo", method = RequestMethod.POST)
-    public void inserirArquivo(@PathVariable int id,
-            @RequestParam("arquivo") MultipartFile arquivo) {
-        Anexo anexo = new Anexo();
-        Optional<Post> findById = postDAO.findById(id);
-        
-            if (findById.isPresent()){
-                try {
+    @RequestMapping(path = "/posts/{idPost}/anexo", method = RequestMethod.POST)
+    public Anexo inserirArquivo(@PathVariable int idPost, @RequestParam("arquivo") MultipartFile arquivo) throws IOException {
+            Anexo anexo = new Anexo();
+
             anexo.setId(0);
             anexo.setTipoAnexo(arquivo.getContentType());
-            anexo.setDocumentoAnexo(arquivo.getBytes());
-                       
-            findById.get().setAnexoPost(anexo);
+            anexo.setNomeAnexo(arquivo.getOriginalFilename());
+            anexo.setDocumentoAnexo(arquivo.getBytes());               
             
-        } catch (IOException ex) {
-            ex.printStackTrace();
-        }
-    }else throw new EntityExistsException("Não é possível encontrar este post");
+            Anexo anexoSalvo = anexoDAO.save(anexo);
+
+            Post postAtual = postDAO.findById(idPost);
+            
+            postAtual.setAnexoPost(anexoSalvo);
+            
+            postDAO.save(postAtual);
+            
+            return anexoSalvo;    
     }
 
 }
